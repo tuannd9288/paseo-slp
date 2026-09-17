@@ -10,7 +10,7 @@ import { resolveProfile } from '../src/profiles.mjs';
 import { launchPlan, handoffPlan } from '../src/launch.mjs';
 import { roleInstructions, roleBundle } from '../src/role-bundle.mjs';
 
-import { piRoleArgs, acpRolePrompt } from '../src/role-transport.mjs';
+import { claudeRoleArgs, piRoleArgs, acpRolePrompt } from '../src/role-transport.mjs';
 import { readCatalog, emptyCatalog, validateCatalog } from '../src/routing.mjs';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
@@ -206,13 +206,16 @@ test('installer registers both role transports and preserves user provider switc
   installPaseo(root, installed, home, true);
   const path = join(home, 'config.json');
   const config = readJson(path);
-  assert.equal(Object.keys(config.agents.providers).length, 9);
+  assert.equal(Object.keys(config.agents.providers).length, 12);
   assert.equal(config.daemon.agentProfiles.length, 2);
   assert.equal(config.agents.providers['slp-pi-peer'].extends, 'pi');
   assert.equal(config.agents.providers['slp-pi-lead'].command[1], join(installed, 'bin/pi-role.mjs'));
   // Devin has no builtin client factory; its wrappers derive from the acp adapter.
   assert.equal(config.agents.providers['slp-devin-peer'].extends, 'acp');
   assert.equal(config.agents.providers['slp-devin-peer'].command[1], join(installed, 'bin/devin-role.mjs'));
+  // Claude has a builtin client factory, so its wrappers extend claude directly.
+  assert.equal(config.agents.providers['slp-claude-peer'].extends, 'claude');
+  assert.equal(config.agents.providers['slp-claude-lead'].command[1], join(installed, 'bin/claude-role.mjs'));
   Object.assign(config.daemon.agentProfiles.find(p => p.id === 'slp-lead'), { provider: 'slp-pi-lead', model: 'b-ai/glm-5.3-flash', thinkingOptionId: 'medium' });
   writeFileSync(path, json(config));
   const bytes = readFileSync(path, 'utf8');
@@ -238,6 +241,39 @@ test('Pi wrapper appends role while preserving RPC bytes, resume, model, thinkin
   }
   assert.deepEqual(piRoleArgs(['--version'], 'policy'), ['--version']);
   assert.deepEqual(piRoleArgs(['--', '--version'], 'policy'), ['--append-system-prompt', 'policy', '--', '--version']);
+});
+
+test('Claude wrapper merges the role into the host prompt on argv and in the initialize request', t => {
+  const { dir, installed } = fixture(t); install(root, installed);
+  const fake = join(dir, 'fake-claude');
+  const receipt = join(dir, 'claude-args.json');
+  writeFileSync(fake, `#!${process.execPath}\nimport fs from 'node:fs'; fs.writeFileSync(process.env.SLP_TEST_RECEIPT, JSON.stringify(process.argv.slice(2))); process.stdin.pipe(process.stdout);\n`);
+  chmodSync(fake, 0o755);
+  // Claude keeps only the last --append-system-prompt and refuses the file form
+  // beside it, so the host's own policy must survive as one merged value.
+  const args = ['--input-format', 'stream-json', '--output-format', 'stream-json',
+    '--model', 'claude-opus-5', '--permission-mode', 'plan', '--append-system-prompt', 'Host policy'];
+  const init = JSON.stringify({ type: 'control_request', request_id: 'r1', request: { subtype: 'initialize', appendSystemPrompt: 'Host policy' } });
+  const passthrough = JSON.stringify({ type: 'user', message: { role: 'user', content: 'hello' } });
+  const input = init + '\n' + passthrough + '\n';
+  for (const role of ['supervisor', 'lead', 'peer']) {
+    const output = execFileSync(process.execPath, [join(installed, 'bin/claude-role.mjs'), role, ...args],
+      { env: { ...process.env, SLP_CLAUDE_BIN: fake, SLP_TEST_RECEIPT: receipt }, input, encoding: 'utf8', timeout: 5000 });
+    const instruction = roleInstructions(installed, role);
+    const seen = readJson(receipt);
+    assert.equal(seen.filter(arg => arg === '--append-system-prompt').length, 1, 'a second flag would discard the host prompt');
+    assert.equal(seen[seen.indexOf('--append-system-prompt') + 1], `Host policy\n\n${instruction}`);
+    const lines = output.trim().split('\n').map(line => JSON.parse(line));
+    assert.equal(lines[0].request.appendSystemPrompt, `Host policy\n\n${instruction}`);
+    assert.deepEqual(lines[1], JSON.parse(passthrough), 'only the initialize request changes');
+  }
+  assert.deepEqual(claudeRoleArgs(['--version'], 'policy'), ['--version']);
+  assert.deepEqual(claudeRoleArgs([], 'policy'), ['--append-system-prompt', 'policy']);
+  assert.deepEqual(claudeRoleArgs(['--append-system-prompt=Host'], 'policy'), ['--append-system-prompt', 'Host\n\npolicy']);
+  const promptFile = join(dir, 'host-prompt.txt'); writeFileSync(promptFile, 'From file');
+  assert.deepEqual(claudeRoleArgs(['--append-system-prompt-file', promptFile, '--model', 'x'], 'policy'),
+    ['--append-system-prompt', 'From file\n\npolicy', '--model', 'x']);
+  assert.deepEqual(claudeRoleArgs(['--append-system-prompt', 'a\n\npolicy'], 'policy'), ['--append-system-prompt', 'a\n\npolicy']);
 });
 
 test('Devin wrapper prepends role policy to the first session prompt of each session', t => {
