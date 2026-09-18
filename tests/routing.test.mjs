@@ -5,7 +5,8 @@ import { fileURLToPath } from 'node:url';
 import { join } from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { identity, install, readJson, json, hash, verifyInstall } from '../src/package.mjs';
-import { installPaseo, upgradePaseo, initWorkspace } from '../src/paseo-install.mjs';
+import { installPaseo, upgradePaseo, initWorkspace, uninstallPaseo } from '../src/paseo-install.mjs';
+import { checkDeclaration, toolsForRole } from '../src/tools.mjs';
 import { resolveProfile } from '../src/profiles.mjs';
 import { launchPlan, handoffPlan } from '../src/launch.mjs';
 import { roleInstructions, roleBundle } from '../src/role-bundle.mjs';
@@ -199,6 +200,45 @@ test('devin bindings accept swe-2 models only and map catalog options to the acp
   catalog.options.find(option => option.id === 'swe2-medium').model = 'claude-opus-5-max';
   writeFileSync(path, json(catalog));
   assert.throws(() => readCatalog(dir), /swe-2/);
+});
+
+test('tool menus are optional: no declaration keeps every host tool, a declaration subtracts per role', t => {
+  const { dir, installed } = fixture(t), home = join(dir, 'home'); mkdirSync(home);
+  installPaseo(root, installed, home, true);
+  const plain = readJson(join(home, 'config.json')).agents.providers;
+  assert.equal(Object.values(plain).filter(entry => 'paseoTools' in entry).length, 0,
+    'absent declaration must write no key at all, leaving upstream behaviour byte-identical');
+
+  const second = fixture(t), home2 = join(second.dir, 'home'); mkdirSync(home2);
+  writeFileSync(join(home2, 'slp-tools.json'), json({ version: 1, roles: {
+    supervisor: { disabledTools: ['create_agent', 'kill_agent'] },
+    peer: { enabled: false },
+  } }));
+  installPaseo(root, second.installed, home2, true);
+  const provs = readJson(join(home2, 'config.json')).agents.providers;
+  for (const family of ['claude', 'codex', 'pi', 'devin']) {
+    assert.deepEqual(provs[`slp-${family}-supervisor`].paseoTools, { enabled: true, disabledTools: ['create_agent', 'kill_agent'] });
+    assert.deepEqual(provs[`slp-${family}-peer`].paseoTools, { enabled: false, disabledTools: [] });
+    assert.equal('paseoTools' in provs[`slp-${family}-lead`], false, 'an undeclared role keeps the full surface');
+  }
+  // The menu belongs to the installation, so uninstall takes it away with its provider.
+  uninstallPaseo(second.installed, true);
+  assert.deepEqual(readJson(join(home2, 'config.json')).agents.providers, {});
+
+  for (const [declaration, message] of [
+    [{ version: 2, roles: {} }, /version/],
+    [{ version: 1, roles: { wizard: { disabledTools: ['x'] } } }, /Unknown role/],
+    [{ version: 1, roles: { lead: { disabledTools: ['x'], extra: 1 } } }, /Unknown key/],
+    [{ version: 1, roles: { lead: { enabled: false, disabledTools: ['x'] } } }, /withholds every tool/],
+    [{ version: 1, roles: { lead: { disabledTools: [] } } }, /non-empty/],
+    [{ version: 1, roles: { lead: { disabledTools: ['Bad-Name'] } } }, /Invalid tool name/],
+    [{ version: 1, roles: { lead: { disabledTools: ['a', 'a'] } } }, /Duplicate/],
+  ]) assert.throws(() => checkDeclaration(declaration), message);
+
+  // Shape is checked; membership in a host tool list deliberately is not. The
+  // host owns that list and it changes between Paseo versions.
+  assert.deepEqual(toolsForRole(checkDeclaration({ version: 1, roles: { lead: { disabledTools: ['not_a_real_tool'] } } }), 'lead'),
+    { enabled: true, disabledTools: ['not_a_real_tool'] });
 });
 
 test('installer registers both role transports and preserves user provider switches and model edits', t => {

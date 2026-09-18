@@ -3,6 +3,7 @@ import { join, resolve, isAbsolute, relative } from 'node:path';
 import { isDeepStrictEqual } from 'node:util';
 import { json, readJson, hash, identity, install, verifyInstall, files } from './package.mjs';
 import { roles, profileRoles, families, profileId, providerId } from './profiles.mjs';
+import { readDeclaration, toolsForRole } from './tools.mjs';
 import { transportOf } from './binding.mjs';
 import { validateCatalog, routingPath } from './routing.mjs';
 import { configFile, writeConfig, mcpFlags, requireMcp, verifyOwnedProviders, verifyOwnedProfiles,
@@ -27,7 +28,9 @@ function scaffoldUserCatalog(home, installDir) {
   return { path, sha256: hash(bytes) };
 }
 
-export function configurationPlan(destination, config) {
+// `declaration` is the optional per-role tool menu. Null writes no paseoTools
+// key at all, leaving every provider on the host's full tool surface.
+export function configurationPlan(destination, config, declaration = null) {
   const providers = {}, profiles = [];
   const existing = hostAgentProfiles(config);
   const family = defaultFamily(config);
@@ -37,6 +40,8 @@ export function configurationPlan(destination, config) {
       throw new Error(`SLP entry already exists: ${role}; uninstall its owning installation first`);
     }
     providers[id] = { extends: transportOf(family), label: `SLP ${family} ${role}`, command: [process.execPath, join(destination, `bin/${family}-role.mjs`), role] };
+    const tools = toolsForRole(declaration, role);
+    if (tools) providers[id].paseoTools = tools;
   }
   for (const role of profileRoles) {
     profiles.push({ id: profileId(role), name: `SLP ${role[0].toUpperCase() + role.slice(1)}`,
@@ -61,8 +66,10 @@ export function installPaseo(source, destination, home, apply = false) {
     requireMcp(file.config);
     return { destination, configPath: file.path, applied: false, alreadyInstalled: true, reloadRequired: true };
   }
-  const proposal = configurationPlan(destination, file.config);
+  const tools = readDeclaration(home);
+  const proposal = configurationPlan(destination, file.config, tools?.declaration ?? null);
   const result = { destination, configPath: file.path, applied: apply, ...proposal,
+    toolsDeclaration: tools?.path ?? null,
     mcp: { enabled: true, injectIntoAgents: true }, reloadRequired: true };
   if (!apply) return result;
   const candidate = install(source, destination).candidate;
@@ -140,7 +147,8 @@ export function upgradePaseo(source, destination, previous, apply = false) {
   for (const id of Object.keys(prior.providers)) delete base.agents.providers[id];
   const saved = verifyOwnedProfiles(base, prior.profiles, 'bound');
   base.daemon.agentProfiles = base.daemon.agentProfiles.filter(p => !saved.has(p.id));
-  const proposal = configurationPlan(destination, base);
+  const tools = readDeclaration(home);
+  const proposal = configurationPlan(destination, base, tools?.declaration ?? null);
   proposal.profiles = proposal.profiles.map(p => saved.get(p.id) ?? p);
   const retainedIds = new Set(proposal.profiles.map(profile => profile.id));
   const retiredProfiles = [...saved.values()].filter(profile => !retainedIds.has(profile.id));

@@ -280,6 +280,40 @@ default, and do not treat another model on the same account as fresh quota.
 When no valid fallback remains, report BLOCKED; keep ownership and evidence
 before handing off.
 
+## Tool menus (optional)
+
+Every provider ships with the host's full Paseo tool surface. A role's policy
+says what it may do; it does not remove the tools it tells that role not to use.
+
+To subtract tools per role, write `$PASEO_HOME/slp-tools.json` before installing:
+
+```json
+{
+  "version": 1,
+  "roles": {
+    "supervisor": { "disabledTools": ["create_agent", "kill_agent"] },
+    "peer": { "enabled": false }
+  }
+}
+```
+
+`enabled: false` withholds every Paseo tool from that role. A role you leave out
+keeps the full surface, and no file at all means nothing changes — the default
+stays exactly as this package ships.
+
+The menu applies to every provider family of that role and becomes part of what
+the installation owns, so `uninstall` removes it with its providers. Changing it
+later means editing the file and reinstalling; the menu binds when a provider is
+registered, not when an agent starts.
+
+Tool names are validated for shape only. Which names exist is the host's
+business and changes between Paseo versions, so no list is compiled into this
+package.
+
+A menu is not isolation. A role that keeps a shell can still reach the
+filesystem with the editor tools removed. Withholding reduces exposure and the
+number of permission prompts a run collects; it is not a security boundary.
+
 ## Lead provider handoff
 
 Switching a Lead to Pi when Codex runs out of quota: change the **SLP Lead**
