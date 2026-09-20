@@ -104,6 +104,21 @@ test('workspace init creates only protocol, routing and notebook once and preser
   assert.equal(readFileSync(protocol, 'utf8'), 'Human protocol');
 });
 
+test('workspace init protocol carries the session lifetime rule and the Supervisor role points at it', t => {
+  const { dir, destination } = fixture(t);
+  install(root, destination);
+  initWorkspace(destination, dir, true);
+  const protocol = readFileSync(join(dir, '.paseo-slp/WORKSPACE_PROTOCOL.md'), 'utf8').replace(/\s+/g, ' ');
+  assert.match(protocol, /## Session lifetime/);
+  for (const term of [
+    'one worktree and one Lead', 'same Engineer for corrections', 'same Reviewer for re-review',
+    'new item gets new sessions', 'same item and the same PR', 'keeps its Lead until merge',
+    'lane card', '.paseo-slp/lanes/', 'worktree being deleted at merge',
+  ]) assert.ok(protocol.includes(term), `protocol missing ${term}`);
+  const supervisor = readFileSync(join(root, 'src/roles/supervisor.md'), 'utf8').replace(/\s+/g, ' ');
+  assert.match(supervisor, /session-lifetime section before creating or reusing a Lead/);
+});
+
 test('repo init imports only an explicit catalog, preserves existing files and rejects invalid imports before writes', t => {
   const { dir, destination, home } = fixture(t); install(root, destination);
   const repository = join(dir, 'job'); mkdirSync(repository);

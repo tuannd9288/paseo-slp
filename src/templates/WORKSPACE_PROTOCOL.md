@@ -83,9 +83,9 @@ authoritative over the user-scope pool until removed.
 Lead selects a ready Peer option for each task using suitableFor, avoidFor, notes,
 priority and budget. Record the rationale, option ID/hash and actual launch bundle.
 Validate against fresh provider discovery; do not inherit a saved slp-peer profile
-or Lead settings. Apply the installed orchestration session continuity policy:
-keep existing context for corrections and re-review; establish a separate session
-when a new independent seat is required. No catalog in either scope or no
+or Lead settings. Inside one work item, apply the installed orchestration
+session continuity policy: keep existing context for corrections and re-review;
+establish a separate session when a new independent seat is required. No catalog in either scope or no
 eligible runtime requires onboarding setup; a missing repository catalog falls
 back to the user-scope pool, never to another repository's catalog.
 
@@ -96,6 +96,24 @@ maintenance, cost limits and
 settlement boundaries. Provider changes for existing work require a new-session
 handoff; an eligible pool option does not itself grant replacement authority.
 Use paseo-slp-onboarding to update tactics and pool while preserving Human choices.
+
+## Session lifetime
+
+One tracked work item (issue) is one branch, one worktree and one Lead; the Lead
+ends when its change merges or the item closes. Engineers and Reviewers follow
+the same boundary: inside the item the installed session continuity policy
+applies — same Engineer for corrections, same Reviewer for re-review — and a new
+item gets new sessions. The only exception is follow-up work on the same item
+and the same PR. An item already in flight keeps its Lead until merge; the rule
+applies from the next item.
+
+Each lane keeps a lane card of at most two pages: machine rules, where frozen
+measurement tools live, settled precedents and errors already hit. The outgoing
+Lead updates the card before it ends; the incoming Lead reads it together with
+the item instead of the old session's history. The card lives where it survives
+the worktree being deleted at merge: by default `.paseo-slp/lanes/<lane>.md`,
+committed with the item's change. A repository that does not version
+`.paseo-slp/` records another location in this protocol.
 
 ## Monitoring and heartbeat
 

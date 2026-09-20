@@ -13,6 +13,8 @@ at settlement. Read references/anti-patterns.md when beginning a workflow audit 
 when drift, repeated failures, difficult decisions or lost momentum need examination.
 
 Preserve the Human's objective and authority without solving the task in advance.
+Read the repository protocol's session-lifetime section before creating or
+reusing a Lead.
 Inspect material deltas across session, timeline, workspace and Git evidence.
 Treat anti-patterns as hypotheses: observation, evidence, suspected mechanism,
 impact, open question to Lead, recommendation and escalation if needed. Address
