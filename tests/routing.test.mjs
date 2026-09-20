@@ -308,6 +308,11 @@ test('Claude wrapper merges the role into the host prompt on argv and in the ini
     assert.deepEqual(lines[1], JSON.parse(passthrough), 'only the initialize request changes');
   }
   assert.deepEqual(claudeRoleArgs(['--version'], 'policy'), ['--version']);
+  // The host probes subcommands through the same configured command; a role flag
+  // pushed onto `auth status` fails Paseo's provider diagnostic with "unknown option".
+  for (const command of ['auth', 'doctor', 'mcp', 'update'])
+    assert.deepEqual(claudeRoleArgs([command, 'status'], 'policy'), [command, 'status']);
+  assert.deepEqual(claudeRoleArgs(['-p', 'auth'], 'policy'), ['-p', 'auth', '--append-system-prompt', 'policy']);
   assert.deepEqual(claudeRoleArgs([], 'policy'), ['--append-system-prompt', 'policy']);
   assert.deepEqual(claudeRoleArgs(['--append-system-prompt=Host'], 'policy'), ['--append-system-prompt', 'Host\n\npolicy']);
   const promptFile = join(dir, 'host-prompt.txt'); writeFileSync(promptFile, 'From file');

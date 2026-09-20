@@ -14,11 +14,22 @@ export function piRoleArgs(args, instruction) {
 // alongside --append-system-prompt-file ("use only one"), so the role must be
 // merged into whatever prompt the host already supplies. A second flag would
 // silently discard the host's own instructions.
+// `claude` is not only a session launcher: it carries subcommands, and the host
+// probes some of them. Paseo's provider diagnostic runs `auth status` through
+// the configured command, and a role flag pushed onto that call fails the probe
+// with "unknown option". Extend this list when Claude adds a subcommand; an
+// unlisted one breaks loudly, which is better than a session losing its role
+// silently.
+const claudeSubcommands = new Set(['agents', 'attach', 'auth', 'auto-mode', 'doctor', 'gateway',
+  'import', 'install', 'logs', 'mcp', 'plugin', 'plugins', 'project', 'respawn', 'rm',
+  'setup-token', 'stop', 'ultrareview', 'update']);
+
 export function claudeRoleArgs(args, instruction) {
   // Insert before -- so the policy cannot become a positional user message.
   const end = args.indexOf('--');
   const options = end < 0 ? args : args.slice(0, end);
   if (options.some(arg => ['--help', '-h', '--version', '-v'].includes(arg))) return [...args];
+  if (options.length && claudeSubcommands.has(options[0])) return [...args];
   const index = end < 0 ? args.length : end;
   const head = args.slice(0, index), tail = args.slice(index);
   const merge = value => typeof value === 'string' && value.includes(instruction)
