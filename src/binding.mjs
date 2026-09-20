@@ -16,6 +16,10 @@ export const transportOf = family => providerTransports[family] ?? family;
 // Devin bindings run swe-2 models only (host policy for this provider family).
 export const devinProviderPattern = /^(devin|slp-devin-[a-z-]+)$/;
 export const swe2ModelPattern = /^swe-2($|-)/;
+// Provider families that expose permission modes in their runtime settings.
+// Pi surfaces no mode concept in its launch arguments or discovered settings,
+// so a pi option legitimately carries no modeId; codex, claude and devin do.
+export const modeFamilies = ['codex', 'claude', 'devin'];
 
 // Route keys a caller may never use to override a chosen runtime bundle.
 export const runtimeSettingKeys = ['provider', 'model', 'modeId', 'thinkingOptionId', 'features'];

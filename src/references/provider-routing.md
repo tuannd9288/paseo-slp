@@ -25,7 +25,9 @@ repository has no catalog, routes resolves the user-scope catalog
 Each option contains an id, provider family (pi/codex/devin), model, optional modeId,
 thinkingOptionId/features, roles, enabled, availability, priority, suitableFor,
 avoidFor and notes. Human/onboarding establishes the pool and suitability under
-project setup authority; Lead chooses within it for each task and budget.
+project setup authority; Lead chooses within it for each task and budget. A
+missing modeId on an enabled Peer option is a catalog gap to report to the
+Human, and a Lead never chooses a permission mode itself.
 
 Choose an enabled, ready option with peer in roles. Explain suitability using the
 assignment and option descriptions; Engineer/Architect/Reviewer are dispositions,

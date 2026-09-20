@@ -32,8 +32,8 @@ const request = { role: 'peer', repository: root, workspaceId: 'workspace', assi
 // Test pool fixture — independent of examples/, which is a documentation
 // skeleton and must never contain launchable model names.
 const testCatalog = () => ({ version: 1, policy: 'Test pool.', quotaFallback: { enabled: false, optionIds: [] }, options: [
-  { id: 'luna-code', provider: 'codex', roles: ['peer'], model: 'gpt-5.6-luna', thinkingOptionId: 'medium', enabled: true, availability: 'unknown', priority: 20, suitableFor: ['coding'], avoidFor: [], notes: 'coding seat' },
-  { id: 'luna-reason', provider: 'codex', roles: ['peer'], model: 'gpt-5.6-luna', thinkingOptionId: 'high', enabled: true, availability: 'unknown', priority: 10, suitableFor: ['reasoning'], avoidFor: [], notes: 'reasoning seat' },
+  { id: 'luna-code', provider: 'codex', roles: ['peer'], model: 'gpt-5.6-luna', modeId: 'auto', thinkingOptionId: 'medium', enabled: true, availability: 'unknown', priority: 20, suitableFor: ['coding'], avoidFor: [], notes: 'coding seat' },
+  { id: 'luna-reason', provider: 'codex', roles: ['peer'], model: 'gpt-5.6-luna', modeId: 'auto', thinkingOptionId: 'high', enabled: true, availability: 'unknown', priority: 10, suitableFor: ['reasoning'], avoidFor: [], notes: 'reasoning seat' },
   { id: 'glm-design', provider: 'pi', roles: ['peer'], model: 'opencode/glm-5.3-flash', thinkingOptionId: 'medium', enabled: true, availability: 'unknown', priority: 20, suitableFor: ['architect'], avoidFor: [], notes: 'pi seat' },
   { id: 'swe2-medium', provider: 'devin', roles: ['peer'], model: 'swe-2-medium', modeId: 'bypass', features: { auto_accept: true }, enabled: true, availability: 'unknown', priority: 20, suitableFor: ['coding'], avoidFor: [], notes: 'devin seat' },
   { id: 'swe2-high', provider: 'devin', roles: ['peer'], model: 'swe-2-high', modeId: 'bypass', features: { auto_accept: true }, enabled: true, availability: 'unknown', priority: 15, suitableFor: ['exploration'], avoidFor: [], notes: 'devin seat' },
@@ -90,7 +90,7 @@ test('Lead selects independent runtime bundles for one Peer role without a dispo
   const architect = launch({ disposition: 'architect', route: route('glm-design') });
   assert.equal(engineer.create.provider, 'slp-codex-peer/gpt-5.6-luna');
   assert.equal(architect.create.provider, 'slp-pi-peer/opencode/glm-5.3-flash');
-  assert.deepEqual(engineer.create.settings, { thinkingOptionId: 'medium', features: {} });
+  assert.deepEqual(engineer.create.settings, { modeId: 'auto', thinkingOptionId: 'medium', features: {} });
   assert.deepEqual(architect.create.settings, { thinkingOptionId: 'medium', features: {} });
   for (const plan of [engineer, architect]) {
     assert.ok(!plan.create.initialPrompt.includes(readFileSync(join(installed, 'src/roles/peer.md'), 'utf8')), 'Installed Peer wrapper supplies policy, not the task prompt');
@@ -458,6 +458,53 @@ test('quota edits invalidate prepared selections and fresh selection can use ano
   assert.throws(() => launch({ route: { ...route('luna-reason'), thinkingOptionId: 'low' } }), /conflicting/);
   assert.throws(() => launch({ providers: [], route: route('luna-reason') }), /Unverified/);
   assert.throws(() => launch({ route: { optionId: 'luna-reason' } }), /hash missing/);
+});
+
+test('an enabled Peer option without modeId is a catalog gap: prepare refuses, routes warns', t => {
+  const { dir, installed } = fixture(t); install(root, installed);
+  const { path, catalog, route } = catalogFixture(dir);
+  const launch = fields => launchPlan(installed, { ...request, profiles: undefined, repository: dir, ...fields });
+  // Complete catalog: no warnings, prepare emits the recorded mode.
+  assert.deepEqual(readCatalog(dir).warnings, []);
+  const before = launch({ route: route('luna-code') });
+  assert.equal(before.create.settings.modeId, 'auto');
+  // Drop modeId from two enabled Peer options: routes names every gap.
+  delete catalog.options[0].modeId;
+  delete catalog.options[1].modeId;
+  writeFileSync(path, json(catalog));
+  const gap = readCatalog(dir);
+  assert.equal(gap.warnings.length, 2);
+  assert.ok(gap.warnings.some(warning => warning.includes('luna-code')));
+  assert.ok(gap.warnings.some(warning => warning.includes('luna-reason')));
+  assert.ok(gap.warnings.every(warning => warning.includes('modeId')));
+  // prepare refuses the modeless option before emitting any launch arguments.
+  assert.throws(() => launch({ route: route('luna-code') }), /luna-code.*modeId.*Human must set modeId in the catalog/);
+  const requestPath = join(dir, 'request.json');
+  writeFileSync(requestPath, json({ ...request, profiles: undefined, repository: dir, route: route('luna-code') }));
+  let failure;
+  try {
+    execFileSync(process.execPath, [join(installed, 'bin/slp.mjs'), 'prepare', requestPath], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
+  } catch (error) { failure = error; }
+  assert.ok(failure && failure.status !== 0, 'prepare must exit non-zero');
+  assert.equal(failure.stdout, '', 'nothing usable as create_agent arguments may be printed');
+  assert.match(failure.stderr, /luna-code/);
+  assert.match(failure.stderr, /Human must set modeId in the catalog/);
+  // routes on the same catalog still succeeds and carries the warnings list.
+  const routes = JSON.parse(execFileSync(process.execPath, [join(installed, 'bin/slp.mjs'), 'routes', dir], { env: { PATH: '' }, encoding: 'utf8' }));
+  assert.equal(routes.warnings.length, 2);
+  // Disabled options stay valid without modeId and produce no warning.
+  catalog.options[0].enabled = false;
+  catalog.options[1].enabled = false;
+  writeFileSync(path, json(catalog));
+  assert.deepEqual(readCatalog(dir).warnings, []);
+  // A family without permission modes (pi) is exempt: enabled, ready, no modeId.
+  assert.equal(launch({ route: route('glm-design') }).create.provider, 'slp-pi-peer/opencode/glm-5.3-flash');
+  // Restoring modeId returns the catalog to its prior behavior.
+  catalog.options[0].enabled = true; catalog.options[0].modeId = 'auto';
+  catalog.options[1].enabled = true; catalog.options[1].modeId = 'auto';
+  writeFileSync(path, json(catalog));
+  assert.deepEqual(readCatalog(dir).warnings, []);
+  assert.deepEqual(launch({ route: route('luna-code') }).create.settings, before.create.settings);
 });
 
 test('routes reads only the selected repo on every call, independent of host and installation location', t => {

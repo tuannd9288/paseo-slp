@@ -4,7 +4,7 @@ import { homedir } from 'node:os';
 import { hash } from './package.mjs';
 import { families, roles, providerId } from './profiles.mjs';
 import { settingIdPattern, unsafeModelPattern, rejectRouteKeys, verifyProvider,
-  runtimeSettingKeys, profileRouteKeys, swe2ModelPattern } from './binding.mjs';
+  runtimeSettingKeys, profileRouteKeys, swe2ModelPattern, modeFamilies } from './binding.mjs';
 
 const record = value => value !== null && typeof value === 'object' && !Array.isArray(value);
 const nonempty = value => typeof value === 'string' && value.trim().length > 0;
@@ -71,8 +71,18 @@ export function readCatalog(repository, home = paseoHome()) {
   }
   if (!fileStat.isFile()) throw new Error(`${scope === 'repository' ? 'Repository' : 'User-scope'} routing catalog must be a regular file`);
   const bytes = readFileSync(path, 'utf8');
-  return { ...validateCatalog(JSON.parse(bytes)), path, scope, sha256: hash(bytes) };
+  const catalog = validateCatalog(JSON.parse(bytes));
+  return { ...catalog, path, scope, sha256: hash(bytes), warnings: catalog.options.filter(peerModeGap).map(modeGapMessage) };
 }
+
+// An enabled Peer option without modeId is a catalog gap: the permission mode
+// is the Human's catalog decision, so prepare refuses to emit modeless launch
+// arguments and routes reports the gap instead of letting it fall through.
+// Families without a mode concept (pi) are exempt; disabled options stay valid.
+const peerModeGap = option =>
+  option.enabled && option.roles.includes('peer') && modeFamilies.includes(option.provider) && option.modeId == null;
+const modeGapMessage = option =>
+  `Routing option ${option.id} has no modeId; the Human must set modeId in the catalog before it can launch`;
 
 // Lead chooses the option, not an enum/disposition-to-profile mapping.
 export function catalogBinding(repository, role, providers, route, home) {
@@ -91,6 +101,7 @@ export function catalogBinding(repository, role, providers, route, home) {
       throw new Error('Quota fallback is disabled or target option is not authorized');
     }
   }
+  if (peerModeGap(option)) throw new Error(modeGapMessage(option));
   const provider = providerId(role, option.provider);
   verifyProvider(providers, provider, () => option.provider, provider);
   return {
