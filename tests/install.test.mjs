@@ -111,15 +111,33 @@ test('workspace init protocol carries the session lifetime rule and the Supervis
   const protocol = readFileSync(join(dir, '.paseo-slp/WORKSPACE_PROTOCOL.md'), 'utf8').replace(/\s+/g, ' ');
   assert.match(protocol, /## Session lifetime/);
   for (const term of [
-    'one worktree and one Lead', 'same Engineer for corrections', 'same Reviewer for re-review',
+    'executable tracked work item', 'one worktree and one Lead',
+    'same Engineer for corrections', 'same Reviewer for re-review',
     'new item gets new sessions', 'same item and the same PR', 'keeps its Lead until merge',
     'lane card', '.paseo-slp/lanes/', 'survives post-merge workspace cleanup',
     'settlement and handback before its change merges', 'retrieval of that handback is the merge gate',
     'archives the workspace through the host archive control',
+    'is not an executable item', 'each executable child slice gets its own Lead',
+    'acceptance boundary and integration candidate',
+    'shared context of related slices', 'read by each new slice Lead',
+    'survives without a long-lived Lead',
   ]) assert.ok(protocol.includes(term), `protocol missing ${term}`);
   assert.ok(!protocol.includes('deleted at merge'), 'protocol still claims deletion at merge');
   const supervisor = readFileSync(join(root, 'src/roles/supervisor.md'), 'utf8').replace(/\s+/g, ' ');
   assert.match(supervisor, /session-lifetime section before creating or reusing a Lead/);
+});
+
+test('installed orchestration reference carries the executable-item Lead boundary', t => {
+  const { destination } = fixture(t);
+  install(root, destination);
+  const orchestration = readFileSync(join(destination, 'src/references/orchestration.md'), 'utf8').replace(/\s+/g, ' ');
+  for (const term of [
+    'one Lead covers one executable tracked work item',
+    'is not an executable item and never gets a Lead to coordinate its child slices',
+    'each executable child slice gets its own Lead',
+    'acceptance boundary and integration candidate',
+    'follow-up work on the same item and the same PR',
+  ]) assert.ok(orchestration.includes(term), `orchestration missing ${term}`);
 });
 
 test('installed monitoring reference carries the merged-workspace cleanup rules', t => {

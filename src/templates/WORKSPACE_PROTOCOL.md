@@ -99,18 +99,26 @@ Use paseo-slp-onboarding to update tactics and pool while preserving Human choic
 
 ## Session lifetime
 
-One tracked work item (issue) is one branch, one worktree and one Lead; the Lead
-finishes its settlement and handback before its change merges, and ends at the
-merge or when the item closes. The Supervisor's retrieval of that handback is the
-merge gate. After the merge, the Supervisor reads back the item's workspace and
-agents, and archives the workspace through the host archive control whatever the
-host's archive-on-merge setting, as references/monitoring.md (merged-workspace
-cleanup) requires. Engineers and Reviewers follow
-the same boundary: inside the item the installed session continuity policy
-applies — same Engineer for corrections, same Reviewer for re-review — and a new
-item gets new sessions. The only exception is follow-up work on the same item
-and the same PR. An item already in flight keeps its Lead until merge; the rule
-applies from the next item.
+One executable tracked work item (issue) is one branch, one worktree and one
+Lead; the Lead finishes its settlement and handback before its change merges,
+and ends at the merge or when the item closes. The Supervisor's retrieval of
+that handback is the merge gate. After the merge, the Supervisor reads back the
+item's workspace and agents, and archives the workspace through the host archive
+control whatever the host's archive-on-merge setting, as references/monitoring.md
+(merged-workspace cleanup) requires. Engineers and Reviewers follow the same
+boundary: inside the item the installed session continuity policy applies —
+same Engineer for corrections, same Reviewer for re-review — and a new item gets
+new sessions. The only exception is follow-up work on the same item and the same
+PR. An item already in flight keeps its Lead until merge; the rule applies from
+the next item. A parent, outcome or epic issue with no branch or worktree of its
+own is not an executable item: it never gets a Lead to coordinate its child
+slices, and each executable child slice gets its own Lead. A module-level Lead
+may coordinate several changes only when the module itself is one bounded item
+with its own branch, worktree, acceptance boundary and integration candidate.
+
+A lane is the shared context of related slices, for example one module; its
+lane card is read by each new slice Lead, so module knowledge survives without
+a long-lived Lead.
 
 Each lane keeps a lane card of at most two pages: machine rules, where frozen
 measurement tools live, settled precedents and errors already hit. The outgoing

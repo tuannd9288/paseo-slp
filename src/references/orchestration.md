@@ -60,6 +60,15 @@ explicit assignment; they do not automatically require discarding useful context
 An Engineer cannot become the independent Reviewer of its own changes. Lead owns
 the reuse/new-session choice within protocol, budget and Human constraints.
 
+The same item boundary scopes the Lead itself: one Lead covers one executable
+tracked work item — one branch and one worktree. A parent, outcome or epic
+issue with no branch or worktree of its own is not an executable item and never
+gets a Lead to coordinate its child slices; each executable child slice gets
+its own Lead. A module-level Lead may coordinate several changes only when the
+module itself is one bounded item with its own branch, worktree, acceptance
+boundary and integration candidate. The only exception is follow-up work on
+the same item and the same PR.
+
 ## Independent design and council
 
 1. Give fresh sessions the problem, evidence and neutral constraints. Withhold the
