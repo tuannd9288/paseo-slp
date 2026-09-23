@@ -155,6 +155,21 @@ test('installed monitoring reference carries the merged-workspace cleanup rules'
   ]) assert.ok(monitoring.includes(term), `monitoring missing ${term}`);
 });
 
+test('installed common policy carries the Human-only permission and destructive-command rules', t => {
+  const { destination } = fixture(t);
+  install(root, destination);
+  const common = readFileSync(join(destination, 'src/common.md'), 'utf8').replace(/\s+/g, ' ');
+  for (const term of [
+    'is not a technical verdict', 'only the Human answers it',
+    'explicit, bounded permission-decision mandate', 'relays it with the command, scope and evidence',
+    'never type, stage or queue a destructive command', 'terminal waiting for Enter',
+    'exact command, target, impact and evidence in chat', 'the Human runs it',
+    'hook or permission mode does not change this',
+    'Observation alone does not authorize commits, pushes, pull-request creation or merges',
+    'explicit current grant',
+  ]) assert.ok(common.includes(term), `common missing ${term}`);
+});
+
 test('repo init imports only an explicit catalog, preserves existing files and rejects invalid imports before writes', t => {
   const { dir, destination, home } = fixture(t); install(root, destination);
   const repository = join(dir, 'job'); mkdirSync(repository);

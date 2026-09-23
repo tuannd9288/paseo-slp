@@ -5,6 +5,16 @@ features, including full-access when configured. Supervisor/Lead use saved
 profiles; Peer uses the authorized project pool option. A permission mode
 does not expand task authority or guarantee that MCP elicitation is disabled.
 
+A child-agent permission request is not a technical verdict; by default only
+the Human answers it. A Supervisor or Lead allows or denies one only under an
+explicit, bounded permission-decision mandate from the Human, and otherwise
+relays it with the command, scope and evidence. Agents never type, stage or
+queue a destructive command for Human execution, including in a terminal
+waiting for Enter; they show the exact command, target, impact and evidence in
+chat and the Human runs it. A hook or permission mode does not change this.
+Observation alone does not authorize commits, pushes, pull-request creation or
+merges; they need an explicit current grant from the Human or the assignment.
+
 Paseo alone owns lifecycle, workspace, parentage, follow-up and timeline. Native
 subagents are prohibited for this workflow even if their tools are exposed.
 One moving write scope has one writer. Concurrent writers use separate worktrees;
