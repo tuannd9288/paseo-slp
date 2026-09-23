@@ -21,14 +21,36 @@ assigned, Lead sends decision, evidence reference and needed attention to that
 Supervisor's agent ID as a bounded report; a Peer reports to Lead the same way.
 Resolve a recipient's ID from the assignment or from the child's
 paseo.parent-agent-id label. Keep reports material: a verdict, handback, blocker or
-changed assumption always warrants one, and an informational report needs no
-acknowledgment prompt in reply.
+changed assumption always warrants one. Lead sends the Supervisor only
+decisions, blockers, verdicts and risk changes; an informational message needs
+no acknowledgment, and Lead never sends acknowledgment-only or slot messages.
 
 If the host has no semantic event bridge, record that gap. Finish callbacks alone
 do not prove mid-task detection. Explicit material reports and, when justified,
 low-frequency heartbeat are available fallback choices. A cheap detector may emit
 signals if provided by the host; it does not issue project verdicts. If no authorized
 wake/report path meets the job's observation need, report the dependent work BLOCKED.
+
+## Shared heavy resources
+
+The repository protocol names each shared heavy resource and one lock path
+shared by every worktree and Lead that uses it. It records the chosen lock
+primitive, atomic exclusive acquisition, an ownership token, the owning Lead
+ID and slice, an expiry or review time, a bounded wait timeout, and the release
+and recovery procedure. The repository chooses an existing lock primitive or
+a small local one. The package adds no queue service, daemon or universal
+database policy.
+
+Each Lead acquires the lock before its own or its Peer's heavy run and releases
+only its own lock after that run has stopped. An asynchronous launch or handback
+does not release it. Expiry triggers verification, not takeover. Recover a stale
+lock only after verifying the previous user has stopped and the lock still
+belongs to that owner. Otherwise preserve the lock and report BLOCKED.
+
+No Lead or Supervisor runs a queue for other Leads. A Lead that cannot acquire
+the lock within the timeout reports one blocker to the Supervisor, which relays
+it to the Human. Routine acquisition, release and acknowledgment traffic stays
+out of the Supervisor's timeline.
 
 ## Heartbeat safety net
 

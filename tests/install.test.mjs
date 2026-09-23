@@ -155,6 +155,43 @@ test('installed monitoring reference carries the merged-workspace cleanup rules'
   ]) assert.ok(monitoring.includes(term), `monitoring missing ${term}`);
 });
 
+test('installed files carry the shared heavy-resource lock and Supervisor traffic rules', t => {
+  const { dir, destination } = fixture(t);
+  install(root, destination);
+  initWorkspace(destination, dir, true);
+  const protocol = readFileSync(join(dir, '.paseo-slp/WORKSPACE_PROTOCOL.md'), 'utf8').replace(/\s+/g, ' ');
+  const monitoring = readFileSync(join(destination, 'src/references/monitoring.md'), 'utf8').replace(/\s+/g, ' ');
+  for (const document of [protocol, monitoring]) {
+    for (const term of [
+      'one lock path shared by every worktree and Lead that uses it',
+      'atomic exclusive acquisition', 'ownership token', 'owning Lead ID and slice',
+      'expiry or review time', 'bounded wait timeout', 'release and recovery procedure',
+      "Each Lead acquires the lock before its own or its Peer's heavy run",
+      'releases only its own lock after that run has stopped',
+      'An asynchronous launch or handback does not release it',
+      'Expiry triggers verification, not takeover',
+      'verifying the previous user has stopped and the lock still belongs to that owner',
+      'Otherwise preserve the lock and report BLOCKED',
+      'No Lead or Supervisor runs a queue for other Leads',
+      'reports one blocker to the Supervisor, which relays it to the Human',
+      "Routine acquisition, release and acknowledgment traffic stays out of the Supervisor's timeline",
+    ]) assert.ok(document.includes(term), `shared-resource contract missing ${term}`);
+  }
+  for (const term of [
+    'Lead sends the Supervisor only decisions, blockers, verdicts and risk changes',
+    'an informational message needs no acknowledgment',
+    'Lead never sends acknowledgment-only or slot messages',
+  ]) assert.ok(monitoring.includes(term), `monitoring missing ${term}`);
+  const onboarding = readFileSync(join(destination, 'skills/paseo-slp-onboarding/SKILL.md'), 'utf8').replace(/\s+/g, ' ');
+  for (const term of [
+    'ask the Human to name each shared heavy resource',
+    'choose its existing lock primitive or small local lock',
+    'set its lock path and bounded wait policy',
+    'Record each named resource and its one lock path',
+    'Do not add a queue service, daemon or universal database policy',
+  ]) assert.ok(onboarding.includes(term), `onboarding missing ${term}`);
+});
+
 test('installed common policy carries the Human-only permission and destructive-command rules', t => {
   const { destination } = fixture(t);
   install(root, destination);

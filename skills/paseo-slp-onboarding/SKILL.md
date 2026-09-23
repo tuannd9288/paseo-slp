@@ -59,6 +59,12 @@ in the protocol frontmatter `routing_intent` with who decided and when; the
 catalog file carries the option IDs. In the same pass, ask the workflow
 communication language — covering reports, assignments and handbacks between
 agents and replies to the Human — and write it into `communication_language`.
+Before setup, ask the Human to name each shared heavy resource, choose its
+existing lock primitive or small local lock, and set its lock path and bounded
+wait policy. Record each named resource and its one lock path in the protocol;
+every worktree and Lead uses that path. Do not add a queue service, daemon or
+universal database policy.
+
 Within granted setup authority, populate the choices the Human made; otherwise
 ask for the missing pool decision before delegation. Offer only providers,
 models and settings that live discovery returned — never invent IDs, capability
@@ -74,7 +80,9 @@ and a `.paseo-slp/notebook.md` Supervisor notebook scaffold without overwriting
 existing files. Fill the frontmatter `supervisor_notebook` field — the scaffolded path with
 its owner, or `timeline:<agentId>` plus a retrieval note the Human can follow.
 Complete tactics: task classes, ownership, topology, proof, budget,
-allowed operations, escalation and settlement. Keep role bytes out of the protocol.
+allowed operations, escalation and settlement. Record each named shared heavy
+resource with its one lock path in the protocol; every worktree and Lead uses
+that path. Keep role bytes out of the protocol.
 
 The default pool decision is inherit: a repository with no catalog resolves the
 user-scope catalog automatically. Any catalog file in the repo is authoritative

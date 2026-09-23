@@ -65,6 +65,26 @@ ownership; otherwise serialize handback. Review only paused, stable candidates.
 Assign one integration writer, preserve unrelated changes and reverify the integrated
 candidate. Do not infer filesystem isolation from workspace IDs.
 
+### Shared heavy resources
+
+Name each shared heavy resource and record one lock path shared by every
+worktree and Lead that uses it. Choose an existing lock primitive or a small
+local one with atomic exclusive acquisition and an ownership token. Record
+the owning Lead ID and slice, an expiry or review time, a bounded wait timeout,
+and the release and recovery procedure. The package specifies this contract,
+not a queue service, daemon or universal database policy.
+
+Each Lead acquires the lock before its own or its Peer's heavy run and releases
+only its own lock after that run has stopped. An asynchronous launch or handback
+does not release it. Expiry triggers verification, not takeover. Recover a stale
+lock only after verifying the previous user has stopped and the lock still
+belongs to that owner. Otherwise preserve the lock and report BLOCKED.
+
+No Lead or Supervisor runs a queue for other Leads. A Lead that cannot acquire
+the lock within the timeout reports one blocker to the Supervisor, which relays
+it to the Human. Routine acquisition, release and acknowledgment traffic stays
+out of the Supervisor's timeline.
+
 ## Routing and skills
 
 `routing_intent` in the frontmatter is `pinned`, `inherit` or `empty`, plus who
