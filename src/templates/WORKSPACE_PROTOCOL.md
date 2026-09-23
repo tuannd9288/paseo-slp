@@ -100,7 +100,12 @@ Use paseo-slp-onboarding to update tactics and pool while preserving Human choic
 ## Session lifetime
 
 One tracked work item (issue) is one branch, one worktree and one Lead; the Lead
-ends when its change merges or the item closes. Engineers and Reviewers follow
+finishes its settlement and handback before its change merges, and ends at the
+merge or when the item closes. The Supervisor's retrieval of that handback is the
+merge gate. After the merge, the Supervisor reads back the item's workspace and
+agents, and archives the workspace through the host archive control whatever the
+host's archive-on-merge setting, as references/monitoring.md (merged-workspace
+cleanup) requires. Engineers and Reviewers follow
 the same boundary: inside the item the installed session continuity policy
 applies — same Engineer for corrections, same Reviewer for re-review — and a new
 item gets new sessions. The only exception is follow-up work on the same item
@@ -111,7 +116,7 @@ Each lane keeps a lane card of at most two pages: machine rules, where frozen
 measurement tools live, settled precedents and errors already hit. The outgoing
 Lead updates the card before it ends; the incoming Lead reads it together with
 the item instead of the old session's history. The card lives where it survives
-the worktree being deleted at merge: by default `.paseo-slp/lanes/<lane>.md`,
+post-merge workspace cleanup: by default `.paseo-slp/lanes/<lane>.md`,
 committed with the item's change. A repository that does not version
 `.paseo-slp/` records another location in this protocol.
 

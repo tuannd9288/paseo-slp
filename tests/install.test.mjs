@@ -113,10 +113,28 @@ test('workspace init protocol carries the session lifetime rule and the Supervis
   for (const term of [
     'one worktree and one Lead', 'same Engineer for corrections', 'same Reviewer for re-review',
     'new item gets new sessions', 'same item and the same PR', 'keeps its Lead until merge',
-    'lane card', '.paseo-slp/lanes/', 'worktree being deleted at merge',
+    'lane card', '.paseo-slp/lanes/', 'survives post-merge workspace cleanup',
+    'settlement and handback before its change merges', 'retrieval of that handback is the merge gate',
+    'archives the workspace through the host archive control',
   ]) assert.ok(protocol.includes(term), `protocol missing ${term}`);
+  assert.ok(!protocol.includes('deleted at merge'), 'protocol still claims deletion at merge');
   const supervisor = readFileSync(join(root, 'src/roles/supervisor.md'), 'utf8').replace(/\s+/g, ' ');
   assert.match(supervisor, /session-lifetime section before creating or reusing a Lead/);
+});
+
+test('installed monitoring reference carries the merged-workspace cleanup rules', t => {
+  const { destination } = fixture(t);
+  install(root, destination);
+  const monitoring = readFileSync(join(destination, 'src/references/monitoring.md'), 'utf8').replace(/\s+/g, ' ');
+  assert.match(monitoring, /## Merged-workspace cleanup/);
+  for (const term of [
+    'The Supervisor owns cleanup correctness through the host archive control, whether that setting is on or off',
+    'the Lead finishes its settlement and handback', 'retrieval of that handback is the merge gate',
+    'An unknown settlement item blocks the merge', 'before asking the Human anything about cleanup',
+    'only verified counts as done', 'No agent reports an archive or deletion it has not read back',
+    'Archive is not cancellation', 'never send work to an archived agent',
+    'including items merged while no Supervisor was alive',
+  ]) assert.ok(monitoring.includes(term), `monitoring missing ${term}`);
 });
 
 test('repo init imports only an explicit catalog, preserves existing files and rejects invalid imports before writes', t => {

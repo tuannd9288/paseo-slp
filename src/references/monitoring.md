@@ -121,3 +121,39 @@ resources only within authority; report any that remain active or unknown.
 Handback lists candidate/verdict separately from resource IDs, cleanup receipts,
 continuing assignments and unknown settlement. Lifecycle idle and a deadline do not
 prove cancellation, successful cleanup or technical acceptance.
+
+## Merged-workspace cleanup
+
+A merged item's workspace is its host worktree plus every agent whose workspace
+it is, the Lead included. The host may archive it after the merge through an
+optional setting (`daemon.autoArchiveAfterMerge`); that is a first pass, never
+evidence of cleanup. The Supervisor owns cleanup correctness through the host
+archive control, whether that setting is on or off.
+
+Before the merge, the Lead finishes its settlement and handback. The Supervisor's
+retrieval of that handback is the merge gate: only then does it tell the Human the
+item is ready to merge, or does an agent merge. An unknown settlement item blocks
+the merge. The Lead does nothing after the merge.
+
+After the merge, before asking the Human anything about cleanup, the Supervisor
+reads back through the host the matching workspace and all agents attached to it.
+If the workspace is still present and its tree is clean and pushed, the Supervisor
+archives it through the host archive control, whether or not its agents are
+active, then reads back the archive result and any remaining workspace or agent
+references. If the host acted between reads, re-read and accept the verified
+state. If the tree is dirty or ahead of its upstream, preserve the workspace and
+report the blocker. The read-back identifies the matching workspace and agents and
+reads the host archive result/state; it need not inspect host-internal PR
+tracking, and records a cause only when evidenced. Each outcome is verified,
+failed or unknown; only verified counts as done. Agents never use `rm` or
+`git push --delete` for cleanup.
+
+No agent reports an archive or deletion it has not read back. Archive is not
+cancellation: an archived agent mid-turn may keep running and a message wakes it,
+so never send work to an archived agent.
+
+When a Supervisor starts, and at every settlement, it sweeps all merged items in
+its assigned repositories, including items merged while no Supervisor was alive:
+it reads each matching workspace and agent state, applies the read-back above and
+reports verified, failed or unknown outcomes. It does not inspect or alter
+repositories outside its assignment.
