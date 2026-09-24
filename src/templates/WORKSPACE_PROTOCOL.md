@@ -122,11 +122,17 @@ Use paseo-slp-onboarding to update tactics and pool while preserving Human choic
 One executable tracked work item (issue) is one branch, one worktree and one
 Lead; the Lead finishes its settlement and handback before its change merges,
 and ends at the merge or when the item closes. The Supervisor's retrieval of
-that handback is the merge gate. After the merge, the Supervisor reads back the
-item's workspace and agents, and archives the workspace through the host archive
-control whatever the host's archive-on-merge setting, as references/monitoring.md
-(merged-workspace cleanup) requires. Engineers and Reviewers follow the same
-boundary: inside the item the installed session continuity policy applies —
+that handback is the merge gate: until it has retrieved and read the Lead's
+handback, it neither approves, requests nor performs a merge nor tells the Human
+the item is ready; a change merged anyway is recorded as merged without
+handback, and the Supervisor retrieves what it can from the Lead before archiving
+it. After the merge, the Supervisor reads back the item's workspace and agents,
+archives the workspace through the host archive control whatever the host's
+archive-on-merge setting, then lists every agent whose cwd was that workspace,
+closed agents included, archives each one through the host archive control and
+reads it back, because the host's archive of a workspace does not archive its
+agents, as references/monitoring.md (merged-workspace cleanup) requires.
+Engineers and Reviewers follow the same boundary: inside the item the installed session continuity policy applies —
 same Engineer for corrections, same Reviewer for re-review — and a new item gets
 new sessions. The only exception is follow-up work on the same item and the same
 PR. An item already in flight keeps its Lead until merge; the rule applies from

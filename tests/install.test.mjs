@@ -117,6 +117,10 @@ test('workspace init protocol carries the session lifetime rule and the Supervis
     'lane card', '.paseo-slp/lanes/', 'survives post-merge workspace cleanup',
     'settlement and handback before its change merges', 'retrieval of that handback is the merge gate',
     'archives the workspace through the host archive control',
+    "until it has retrieved and read the Lead's handback", 'merged without handback',
+    'retrieves what it can from the Lead before archiving it',
+    'does not archive its agents', 'every agent whose cwd was that workspace, closed agents included',
+    'archives each one through the host archive control and reads it back',
     'is not an executable item', 'each executable child slice gets its own Lead',
     'acceptance boundary and integration candidate',
     'shared context of related slices', 'read by each new slice Lead',
@@ -152,6 +156,12 @@ test('installed monitoring reference carries the merged-workspace cleanup rules'
     'only verified counts as done', 'No agent reports an archive or deletion it has not read back',
     'Archive is not cancellation', 'never send work to an archived agent',
     'including items merged while no Supervisor was alive',
+    "until it has retrieved and read the Lead's handback", 'approve, request or perform a merge',
+    'ready to merge', 'records the item as merged without handback',
+    'retrieves what it can from the Lead before archiving it',
+    "The host's archive of a workspace does not archive its agents",
+    'every agent whose cwd was that workspace, closed agents included',
+    'archives each one through the host archive control and reads it back',
   ]) assert.ok(monitoring.includes(term), `monitoring missing ${term}`);
 });
 

@@ -153,9 +153,12 @@ evidence of cleanup. The Supervisor owns cleanup correctness through the host
 archive control, whether that setting is on or off.
 
 Before the merge, the Lead finishes its settlement and handback. The Supervisor's
-retrieval of that handback is the merge gate: only then does it tell the Human the
-item is ready to merge, or does an agent merge. An unknown settlement item blocks
-the merge. The Lead does nothing after the merge.
+retrieval of that handback is the merge gate: until it has retrieved and read the
+Lead's handback, the Supervisor does not approve, request or perform a merge, and
+does not tell the Human the item is ready to merge. An unknown settlement item
+blocks the merge. The Lead does nothing after the merge. If the change merged
+anyway, by the Human or by automation, the Supervisor records the item as merged
+without handback and retrieves what it can from the Lead before archiving it.
 
 After the merge, before asking the Human anything about cleanup, the Supervisor
 reads back through the host the matching workspace and all agents attached to it.
@@ -169,6 +172,12 @@ reads the host archive result/state; it need not inspect host-internal PR
 tracking, and records a cause only when evidenced. Each outcome is verified,
 failed or unknown; only verified counts as done. Agents never use `rm` or
 `git push --delete` for cleanup.
+
+The host's archive of a workspace does not archive its agents: the host can remove
+the workspace and its folder yet leave its Lead closed, not archived, with its cwd
+gone. After every merge the Supervisor lists every agent whose cwd was that
+workspace, closed agents included, archives each one through the host archive
+control and reads it back.
 
 No agent reports an archive or deletion it has not read back. Archive is not
 cancellation: an archived agent mid-turn may keep running and a message wakes it,
